@@ -30,7 +30,11 @@ BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
         key="flat", name="Flat", icon="mdi:bed-empty", command_key="flat"
     ),
     TempurpedicButtonDescription(
-        key="head_up", name="Head Up", icon="mdi:arrow-up-bold", command_key="head_up", hold=True
+        key="head_up",
+        name="Head Up",
+        icon="mdi:arrow-up-bold",
+        command_key="head_up",
+        hold=True,
     ),
     TempurpedicButtonDescription(
         key="head_down",
@@ -40,7 +44,11 @@ BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
         hold=True,
     ),
     TempurpedicButtonDescription(
-        key="legs_up", name="Legs Up", icon="mdi:arrow-up-bold", command_key="legs_up", hold=True
+        key="legs_up",
+        name="Legs Up",
+        icon="mdi:arrow-up-bold",
+        command_key="legs_up",
+        hold=True,
     ),
     TempurpedicButtonDescription(
         key="legs_down",

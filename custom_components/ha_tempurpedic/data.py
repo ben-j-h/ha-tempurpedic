@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 
 if TYPE_CHECKING:
+    import asyncio
+
     from .api import TempurpedicClient
 
 type TempurpedicConfigEntry = ConfigEntry[TempurpedicData]
@@ -18,3 +20,4 @@ class TempurpedicData:
     """Runtime data stored in config entry."""
 
     client: TempurpedicClient
+    move_task: asyncio.Task | None = field(default=None)

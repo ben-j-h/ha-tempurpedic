@@ -1,0 +1,17 @@
+start_move:
+  name: Start Move
+  description: Begin continuously sending a hold command (head/legs up or down) until stop_move is called.
+  fields:
+    entity_id:
+      name: Button Entity
+      description: The head_up, head_down, legs_up, or legs_down button entity to activate.
+      required: true
+      selector:
+        entity:
+          domain: button
+          integration: ha_tempurpedic
+
+stop_move:
+  name: Stop Move
+  description: Stop any active hold movement on all sides.
+  fields: {}
