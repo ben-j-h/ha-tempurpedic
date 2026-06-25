@@ -28,7 +28,7 @@ COMMANDS: dict[str, bytes] = {
     "vibrate_4":    bytes.fromhex("33053203948d037862"),
 }
 
-# Vibration intensity levels (10 steps, mapped from 1–10)
+# Vibration intensity levels (10 steps, mapped from 1-10)
 # Checksum = bytes[4] XOR bytes[5] XOR bytes[6] XOR bytes[7]
 VIB_LEVELS = [0x18, 0x30, 0x48, 0x60, 0x78, 0x90, 0xA8, 0xC0, 0xD8, 0xF0]
 VIB_ZONE_HEAD  = 0x00
@@ -37,10 +37,11 @@ VIB_ZONE_LEGS  = 0x02
 
 
 def build_vib_command(zone: int, level: int) -> bytes:
-    """Build a 9-byte vibration intensity command.
+    """
+    Build a 9-byte vibration intensity command.
 
     zone: VIB_ZONE_HEAD / TORSO / LEGS
-    level: 1–10
+    level: 1-10
     """
     level_byte = VIB_LEVELS[max(0, min(9, level - 1))]
     checksum = 0x94 ^ 0x85 ^ zone ^ level_byte

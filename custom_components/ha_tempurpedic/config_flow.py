@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.data_entry_flow import FlowResult
 
 from .api import TempurpedicClient
 from .const import CONF_HOST, CONF_PORT, DEFAULT_PORT, DOMAIN, LOGGER
+
+if TYPE_CHECKING:
+    from homeassistant.data_entry_flow import FlowResult
 
 STEP_SCHEMA = vol.Schema(
     {
@@ -28,6 +30,7 @@ class TempurpedicFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input: dict[str, Any] | None = None,
     ) -> FlowResult:
+        """Handle the initial configuration step."""
         errors: dict[str, str] = {}
 
         if user_input is not None:

@@ -1,11 +1,15 @@
-"""Number platform for ha_tempurpedic — vibration intensity per zone."""
+"""Number platform for ha_tempurpedic -- vibration intensity per zone."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription, NumberMode
+from homeassistant.components.number import (
+    NumberEntity,
+    NumberEntityDescription,
+    NumberMode,
+)
 
 from .const import VIB_ZONE_HEAD, VIB_ZONE_LEGS, VIB_ZONE_TORSO, build_vib_command
 from .entity import TempurpedicEntity
@@ -19,21 +23,33 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True)
 class TempurpedicNumberDescription(NumberEntityDescription):
+    """Description for a Tempurpedic vibration number entity."""
+
     zone: int
 
 
 NUMBER_DESCRIPTIONS: tuple[TempurpedicNumberDescription, ...] = (
-    TempurpedicNumberDescription(key="vib_head",  name="Head Vibration",  icon="mdi:vibrate", zone=VIB_ZONE_HEAD),
-    TempurpedicNumberDescription(key="vib_torso", name="Torso Vibration", icon="mdi:vibrate", zone=VIB_ZONE_TORSO),
-    TempurpedicNumberDescription(key="vib_legs",  name="Legs Vibration",  icon="mdi:vibrate", zone=VIB_ZONE_LEGS),
+    TempurpedicNumberDescription(
+        key="vib_head", name="Head Vibration", icon="mdi:vibrate", zone=VIB_ZONE_HEAD
+    ),
+    TempurpedicNumberDescription(
+        key="vib_torso",
+        name="Torso Vibration",
+        icon="mdi:vibrate",
+        zone=VIB_ZONE_TORSO,
+    ),
+    TempurpedicNumberDescription(
+        key="vib_legs", name="Legs Vibration", icon="mdi:vibrate", zone=VIB_ZONE_LEGS
+    ),
 )
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    hass: HomeAssistant,  # noqa: ARG001
     entry: TempurpedicConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    """Set up number entities from a config entry."""
     async_add_entities(
         TempurpedicVibrationNumber(entry=entry, description=desc)
         for desc in NUMBER_DESCRIPTIONS
@@ -41,7 +57,7 @@ async def async_setup_entry(
 
 
 class TempurpedicVibrationNumber(TempurpedicEntity, NumberEntity):
-    """Slider to set vibration intensity for one zone (1–10)."""
+    """Slider to set vibration intensity for one zone (1-10)."""
 
     entity_description: TempurpedicNumberDescription
 
@@ -56,11 +72,13 @@ class TempurpedicVibrationNumber(TempurpedicEntity, NumberEntity):
         entry: TempurpedicConfigEntry,
         description: TempurpedicNumberDescription,
     ) -> None:
+        """Initialise vibration number entity."""
         super().__init__(entry)
         self.entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
 
     async def async_set_native_value(self, value: float) -> None:
+        """Send vibration intensity command to the bed."""
         self._attr_native_value = value
         cmd = build_vib_command(self.entity_description.zone, int(value))
         client = self._entry.runtime_data.client

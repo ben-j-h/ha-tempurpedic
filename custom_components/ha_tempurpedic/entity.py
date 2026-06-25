@@ -20,6 +20,7 @@ class TempurpedicEntity(Entity):
     _attr_should_poll = False
 
     def __init__(self, entry: ConfigEntry) -> None:
+        """Initialise base entity with device info."""
         self._entry = entry
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
