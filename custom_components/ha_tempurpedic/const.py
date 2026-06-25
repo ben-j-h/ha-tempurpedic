@@ -5,6 +5,7 @@ from logging import Logger, getLogger
 LOGGER: Logger = getLogger(__package__)
 
 DOMAIN = "ha_tempurpedic"
+CONF_NAME = "name"
 CONF_HOST = "host"
 CONF_PORT = "port"
 DEFAULT_PORT = 50007

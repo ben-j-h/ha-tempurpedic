@@ -8,13 +8,14 @@ import voluptuous as vol
 from homeassistant import config_entries
 
 from .api import TempurpedicClient
-from .const import CONF_HOST, CONF_PORT, DEFAULT_PORT, DOMAIN, LOGGER
+from .const import CONF_HOST, CONF_NAME, CONF_PORT, DEFAULT_PORT, DOMAIN, LOGGER
 
 if TYPE_CHECKING:
     from homeassistant.data_entry_flow import FlowResult
 
 STEP_SCHEMA = vol.Schema(
     {
+        vol.Required(CONF_NAME): str,
         vol.Required(CONF_HOST): str,
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
     }
@@ -40,8 +41,9 @@ class TempurpedicFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             )
             reachable = await self.hass.async_add_executor_job(client.test_connection)
             if reachable:
-                title = f"Tempurpedic ({user_input[CONF_HOST]})"
-                return self.async_create_entry(title=title, data=user_input)
+                return self.async_create_entry(
+                    title=user_input[CONF_NAME], data=user_input
+                )
             LOGGER.warning("Could not reach bed at %s", user_input[CONF_HOST])
             errors["base"] = "cannot_connect"
 

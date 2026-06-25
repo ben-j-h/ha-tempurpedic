@@ -4,8 +4,12 @@
             "user": {
                 "description": "Enter the IP address of your Tempurpedic adjustable base. For a split king, add this integration twice — once per side.",
                 "data": {
+                    "name": "Device Name",
                     "host": "IP Address",
                     "port": "UDP Port"
+                },
+                "data_description": {
+                    "name": "A friendly label for this side (e.g. \"Master Bedroom Left\"). Used as the device name in Home Assistant."
                 }
             }
         },
