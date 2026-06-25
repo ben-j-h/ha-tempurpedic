@@ -1,0 +1,16 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "description": "Enter the IP address of your Tempurpedic adjustable base. For a split king, add this integration twice — once per side.",
+                "data": {
+                    "host": "IP Address",
+                    "port": "UDP Port"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Unable to reach the bed. Check the IP address and ensure the bed is powered on and connected to WiFi."
+        }
+    }
+}
