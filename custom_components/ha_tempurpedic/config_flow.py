@@ -6,9 +6,21 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
 
 from .api import TempurpedicClient
-from .const import CONF_HOST, CONF_NAME, CONF_PORT, DEFAULT_PORT, DOMAIN, LOGGER
+from .const import (
+    CONF_HEAD_MAX,
+    CONF_HOST,
+    CONF_LEG_MAX,
+    CONF_NAME,
+    CONF_PORT,
+    DEFAULT_HEAD_MAX,
+    DEFAULT_LEG_MAX,
+    DEFAULT_PORT,
+    DOMAIN,
+    LOGGER,
+)
 
 if TYPE_CHECKING:
     from homeassistant.data_entry_flow import FlowResult
@@ -26,6 +38,14 @@ class TempurpedicFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Tempurpedic adjustable base."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,  # noqa: ARG004
+    ) -> TempurpedicOptionsFlow:
+        """Create options flow."""
+        return TempurpedicOptionsFlow()
 
     async def async_step_user(
         self,
@@ -52,3 +72,30 @@ class TempurpedicFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=STEP_SCHEMA,
             errors=errors,
         )
+
+
+class TempurpedicOptionsFlow(config_entries.OptionsFlow):
+    """Options flow for calibrating position max ticks."""
+
+    async def async_step_init(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Handle options step."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        current = self.config_entry.options
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_HEAD_MAX,
+                    default=current.get(CONF_HEAD_MAX, DEFAULT_HEAD_MAX),
+                ): int,
+                vol.Optional(
+                    CONF_LEG_MAX,
+                    default=current.get(CONF_LEG_MAX, DEFAULT_LEG_MAX),
+                ): int,
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

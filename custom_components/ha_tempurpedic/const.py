@@ -10,6 +10,11 @@ CONF_HOST = "host"
 CONF_PORT = "port"
 DEFAULT_PORT = 50007
 
+CONF_HEAD_MAX = "head_max_ticks"
+CONF_LEG_MAX = "leg_max_ticks"
+DEFAULT_HEAD_MAX = 10
+DEFAULT_LEG_MAX = 10
+
 LOGICDATAOPEN = b"\xfeLOGICDATAOPEN"
 
 COMMANDS: dict[str, bytes] = {

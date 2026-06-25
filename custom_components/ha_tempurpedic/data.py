@@ -21,3 +21,6 @@ class TempurpedicData:
 
     client: TempurpedicClient
     move_task: asyncio.Task | None = field(default=None)
+    head_ticks: int = 0
+    leg_ticks: int = 0
+    position_sensors: list = field(default_factory=list)

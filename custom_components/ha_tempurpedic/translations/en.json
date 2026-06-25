@@ -16,5 +16,20 @@
         "error": {
             "cannot_connect": "Unable to reach the bed. Check the IP address and ensure the bed is powered on and connected to WiFi."
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Calibrate position tracking. Start from flat, hold the section up until it stops, then read the tick count from the sensor. Enter 0 to leave a section uncalibrated (position shows as unknown).",
+                "data": {
+                    "head_max_ticks": "Head Max Ticks",
+                    "leg_max_ticks": "Leg Max Ticks"
+                },
+                "data_description": {
+                    "head_max_ticks": "Tick count from flat to maximum head elevation.",
+                    "leg_max_ticks": "Tick count from flat to maximum leg elevation."
+                }
+            }
+        }
     }
 }

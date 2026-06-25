@@ -11,7 +11,16 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
 from .api import TempurpedicClient
-from .const import COMMANDS, CONF_HOST, CONF_PORT, DEFAULT_PORT, DOMAIN, LOGGER
+from .const import (
+    COMMANDS,
+    CONF_HEAD_MAX,
+    CONF_HOST,
+    CONF_LEG_MAX,
+    CONF_PORT,
+    DEFAULT_PORT,
+    DOMAIN,
+    LOGGER,
+)
 from .data import TempurpedicData
 
 if TYPE_CHECKING:
@@ -19,7 +28,7 @@ if TYPE_CHECKING:
 
     from .data import TempurpedicConfigEntry
 
-PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.NUMBER]
+PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.NUMBER, Platform.SENSOR]
 
 
 async def async_setup_entry(
@@ -41,6 +50,8 @@ async def async_setup_entry(
     if not hass.services.has_service(DOMAIN, "start_move"):
         _async_register_services(hass)
 
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+
     return True
 
 
@@ -58,6 +69,15 @@ async def async_unload_entry(
         hass.services.async_remove(DOMAIN, "stop_move")
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def _async_options_updated(
+    hass: HomeAssistant,  # noqa: ARG001
+    entry: TempurpedicConfigEntry,
+) -> None:
+    """Push sensor state update when calibration options change."""
+    for sensor in entry.runtime_data.position_sensors:
+        sensor.async_write_ha_state()
 
 
 def _async_register_services(hass: HomeAssistant) -> None:
@@ -89,6 +109,29 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 await hass.async_add_executor_job(
                     entry_data.client.send_command, command
                 )
+                ce = hass.config_entries.async_get_entry(entry_id)
+                opts = ce.options if ce else {}
+                head_max: int = opts.get(CONF_HEAD_MAX, 0)
+                leg_max: int = opts.get(CONF_LEG_MAX, 0)
+
+                if command_key == "head_up":
+                    entry_data.head_ticks = min(
+                        entry_data.head_ticks + 1,
+                        head_max if head_max else 999_999,
+                    )
+                elif command_key == "head_down":
+                    entry_data.head_ticks = max(entry_data.head_ticks - 1, 0)
+                elif command_key == "legs_up":
+                    entry_data.leg_ticks = min(
+                        entry_data.leg_ticks + 1,
+                        leg_max if leg_max else 999_999,
+                    )
+                elif command_key == "legs_down":
+                    entry_data.leg_ticks = max(entry_data.leg_ticks - 1, 0)
+
+                for sensor in entry_data.position_sensors:
+                    sensor.async_write_ha_state()
+
                 await asyncio.sleep(0)
 
         entry_data.move_task = hass.async_create_task(move_loop())

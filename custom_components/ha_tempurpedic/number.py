@@ -11,7 +11,13 @@ from homeassistant.components.number import (
     NumberMode,
 )
 
-from .const import VIB_ZONE_HEAD, VIB_ZONE_LEGS, VIB_ZONE_TORSO, build_vib_command
+from .const import (
+    COMMANDS,
+    VIB_ZONE_HEAD,
+    VIB_ZONE_LEGS,
+    VIB_ZONE_TORSO,
+    build_vib_command,
+)
 from .entity import TempurpedicEntity
 
 if TYPE_CHECKING:
@@ -61,11 +67,11 @@ class TempurpedicVibrationNumber(TempurpedicEntity, NumberEntity):
 
     entity_description: TempurpedicNumberDescription
 
-    _attr_native_min_value = 1
+    _attr_native_min_value = 0
     _attr_native_max_value = 10
     _attr_native_step = 1
     _attr_mode = NumberMode.SLIDER
-    _attr_native_value: float = 1
+    _attr_native_value: float = 0
 
     def __init__(
         self,
@@ -80,7 +86,10 @@ class TempurpedicVibrationNumber(TempurpedicEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Send vibration intensity command to the bed."""
         self._attr_native_value = value
-        cmd = build_vib_command(self.entity_description.zone, int(value))
+        if value == 0:
+            cmd = COMMANDS["vibrate_off"]
+        else:
+            cmd = build_vib_command(self.entity_description.zone, int(value))
         client = self._entry.runtime_data.client
         await self.hass.async_add_executor_job(client.send_command_direct, cmd)
         self.async_write_ha_state()

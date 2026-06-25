@@ -149,6 +149,17 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Send the command to the bed."""
+        # Flat is the hard sync point: cancel movement and reset position state.
+        if self.entity_description.key == "flat":
+            rd = self._entry.runtime_data
+            if rd.move_task and not rd.move_task.done():
+                rd.move_task.cancel()
+                rd.move_task = None
+            rd.head_ticks = 0
+            rd.leg_ticks = 0
+            for sensor in rd.position_sensors:
+                sensor.async_write_ha_state()
+
         client = self._entry.runtime_data.client
         cmd = COMMANDS[self.entity_description.command_key]
         send = (
