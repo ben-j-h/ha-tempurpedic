@@ -136,4 +136,8 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
         cmd = COMMANDS[self.entity_description.command_key]
         ok = await self.hass.async_add_executor_job(client.send_command, cmd)
         if not ok:
-            LOGGER.warning("No ACK for %s command", self.entity_description.key)
+            LOGGER.debug(
+                "%s: no ACK for %s (hold-overlap expected)",
+                self._entry.title,
+                self.entity_description.key,
+            )
