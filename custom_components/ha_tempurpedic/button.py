@@ -22,6 +22,7 @@ class TempurpedicButtonDescription(ButtonEntityDescription):
     """Description for a Tempurpedic button entity."""
 
     command_key: str
+    hold: bool = False
 
 
 BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
@@ -29,22 +30,24 @@ BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
         key="flat", name="Flat", icon="mdi:bed-empty", command_key="flat"
     ),
     TempurpedicButtonDescription(
-        key="head_up", name="Head Up", icon="mdi:arrow-up-bold", command_key="head_up"
+        key="head_up", name="Head Up", icon="mdi:arrow-up-bold", command_key="head_up", hold=True
     ),
     TempurpedicButtonDescription(
         key="head_down",
         name="Head Down",
         icon="mdi:arrow-down-bold",
         command_key="head_down",
+        hold=True,
     ),
     TempurpedicButtonDescription(
-        key="legs_up", name="Legs Up", icon="mdi:arrow-up-bold", command_key="legs_up"
+        key="legs_up", name="Legs Up", icon="mdi:arrow-up-bold", command_key="legs_up", hold=True
     ),
     TempurpedicButtonDescription(
         key="legs_down",
         name="Legs Down",
         icon="mdi:arrow-down-bold",
         command_key="legs_down",
+        hold=True,
     ),
     TempurpedicButtonDescription(
         key="preset_1",
@@ -136,8 +139,15 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
         cmd = COMMANDS[self.entity_description.command_key]
         ok = await self.hass.async_add_executor_job(client.send_command, cmd)
         if not ok:
-            LOGGER.debug(
-                "%s: no ACK for %s (hold-overlap expected)",
-                self._entry.title,
-                self.entity_description.key,
-            )
+            if self.entity_description.hold:
+                LOGGER.debug(
+                    "%s: no ACK for %s (hold-overlap, bed likely moving)",
+                    self._entry.title,
+                    self.entity_description.key,
+                )
+            else:
+                LOGGER.warning(
+                    "%s: no ACK for %s command",
+                    self._entry.title,
+                    self.entity_description.key,
+                )
