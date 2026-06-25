@@ -49,6 +49,29 @@ class TempurpedicClient:
             with contextlib.suppress(OSError):
                 sock.close()
 
+    def send_command_direct(self, command: bytes) -> bool:
+        """
+        Send a single packet and expect ACK3, no LOGICDATAOPEN.
+
+        Vibration commands don't use the session protocol.
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sock.settimeout(2)
+            sock.connect((self._host, self._port))
+            sock.send(command)
+            try:
+                ack = sock.recv(16)
+            except TimeoutError:
+                return False
+            else:
+                return ack == b"ACK3"
+        except OSError:
+            return False
+        finally:
+            with contextlib.suppress(OSError):
+                sock.close()
+
     def test_connection(self) -> bool:
         r"""Quick connectivity test -- send LOGICDATAOPEN and expect ACK\xfe."""
         from .const import LOGICDATAOPEN

@@ -82,5 +82,5 @@ class TempurpedicVibrationNumber(TempurpedicEntity, NumberEntity):
         self._attr_native_value = value
         cmd = build_vib_command(self.entity_description.zone, int(value))
         client = self._entry.runtime_data.client
-        await self.hass.async_add_executor_job(client.send_command, cmd)
+        await self.hass.async_add_executor_job(client.send_command_direct, cmd)
         self.async_write_ha_state()

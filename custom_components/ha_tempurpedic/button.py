@@ -23,6 +23,7 @@ class TempurpedicButtonDescription(ButtonEntityDescription):
 
     command_key: str
     hold: bool = False
+    direct: bool = False  # single send (no LOGICDATAOPEN) — vibration commands only
 
 
 BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
@@ -86,30 +87,35 @@ BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
         name="Vibration Off",
         icon="mdi:vibrate-off",
         command_key="vibrate_off",
+        direct=True,
     ),
     TempurpedicButtonDescription(
         key="vibrate_1",
         name="Vibration Preset 1",
         icon="mdi:vibrate",
         command_key="vibrate_1",
+        direct=True,
     ),
     TempurpedicButtonDescription(
         key="vibrate_2",
         name="Vibration Preset 2",
         icon="mdi:vibrate",
         command_key="vibrate_2",
+        direct=True,
     ),
     TempurpedicButtonDescription(
         key="vibrate_3",
         name="Vibration Preset 3",
         icon="mdi:vibrate",
         command_key="vibrate_3",
+        direct=True,
     ),
     TempurpedicButtonDescription(
         key="vibrate_4",
         name="Vibration Preset 4",
         icon="mdi:vibrate",
         command_key="vibrate_4",
+        direct=True,
     ),
 )
 
@@ -145,7 +151,12 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
         """Send the command to the bed."""
         client = self._entry.runtime_data.client
         cmd = COMMANDS[self.entity_description.command_key]
-        ok = await self.hass.async_add_executor_job(client.send_command, cmd)
+        send = (
+            client.send_command_direct
+            if self.entity_description.direct
+            else client.send_command
+        )
+        ok = await self.hass.async_add_executor_job(send, cmd)
         if not ok:
             if self.entity_description.hold:
                 LOGGER.debug(
