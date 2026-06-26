@@ -7,5 +7,5 @@
   "iot_class": "assumed_state",
   "integration_type": "device",
   "issue_tracker": "https://github.com/ben-j-h/ha-tempurpedic/issues",
-  "version": "1.0.6"
+  "version": "1.0.7"
 }

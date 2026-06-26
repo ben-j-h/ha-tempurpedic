@@ -78,7 +78,6 @@ class TempurpedicClient:
             sock.send(VIB_POST)
             with contextlib.suppress(TimeoutError):
                 sock.recv(16)  # ACK4
-            return True
         except OSError:
             return False
         else:

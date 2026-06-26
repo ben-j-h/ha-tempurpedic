@@ -1,0 +1,35 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "description": "Enter the IP address of your Tempurpedic adjustable base. For a split king, add this integration twice — once per side.",
+                "data": {
+                    "name": "Device Name",
+                    "host": "IP Address",
+                    "port": "UDP Port"
+                },
+                "data_description": {
+                    "name": "A friendly label for this side (e.g. \"Master Bedroom Left\"). Used as the device name in Home Assistant."
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Unable to reach the bed. Check the IP address and ensure the bed is powered on and connected to WiFi."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "description": "Calibrate position tracking. Start from flat, hold the section up until it stops, then read the tick count from the sensor. Enter 0 to leave a section uncalibrated (position shows as unknown).",
+                "data": {
+                    "head_max_ticks": "Head Max Ticks",
+                    "leg_max_ticks": "Leg Max Ticks"
+                },
+                "data_description": {
+                    "head_max_ticks": "Tick count from flat to maximum head elevation.",
+                    "leg_max_ticks": "Tick count from flat to maximum leg elevation."
+                }
+            }
+        }
+    }
+}
