@@ -104,8 +104,6 @@ class TempurpedicPositionSensor(TempurpedicEntity, SensorEntity):
         """Expose raw tick count for calibration."""
         rd = self._entry.runtime_data
         ticks = (
-            rd.head_ticks
-            if self.entity_description.zone == "head"
-            else rd.leg_ticks
+            rd.head_ticks if self.entity_description.zone == "head" else rd.leg_ticks
         )
         return {"ticks": ticks}

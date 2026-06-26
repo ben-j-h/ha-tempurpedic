@@ -95,7 +95,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             return
 
         # unique_id format: "{entry_id}_{command_key}"
-        command_key = entity_entry.unique_id[len(entry_id) + 1:]
+        command_key = entity_entry.unique_id[len(entry_id) + 1 :]
         command = COMMANDS.get(command_key)
         if not command:
             LOGGER.warning("start_move: no command for key %s", command_key)

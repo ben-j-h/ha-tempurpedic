@@ -127,8 +127,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up button entities from a config entry."""
     async_add_entities(
-        TempurpedicButton(entry=entry, description=desc)
-        for desc in BUTTON_DESCRIPTIONS
+        TempurpedicButton(entry=entry, description=desc) for desc in BUTTON_DESCRIPTIONS
     )
 
 
