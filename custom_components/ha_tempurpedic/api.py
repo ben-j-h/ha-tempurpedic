@@ -49,28 +49,47 @@ class TempurpedicClient:
             with contextlib.suppress(OSError):
                 sock.close()
 
-    def send_command_direct(self, command: bytes) -> bool:
+    def send_vib_session(self, commands: list[bytes]) -> bool:
         """
-        Send a single packet and expect ACK3, no LOGICDATAOPEN.
+        Send one or more vibration commands in a PRE/POST session.
 
-        Vibration commands don't use the session protocol.
+        Protocol: 0x35 → ACK5 → [command → ACK3]+ → 0x34 → ACK4.
+        Multiple commands share one session (used for level stepping).
         """
+        from .const import VIB_POST, VIB_PRE
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             sock.settimeout(2)
             sock.connect((self._host, self._port))
-            sock.send(command)
+            sock.send(VIB_PRE)
             try:
-                ack = sock.recv(16)
+                sock.recv(32)  # ACK5
             except TimeoutError:
                 return False
-            else:
-                return ack == b"ACK3"
+            for cmd in commands:
+                sock.send(cmd)
+                try:
+                    ack = sock.recv(16)
+                except TimeoutError:
+                    return False
+                if ack != b"ACK3":
+                    return False
+            sock.send(VIB_POST)
+            with contextlib.suppress(TimeoutError):
+                sock.recv(16)  # ACK4
+            return True
         except OSError:
             return False
+        else:
+            return True
         finally:
             with contextlib.suppress(OSError):
                 sock.close()
+
+    def send_command_direct(self, command: bytes) -> bool:
+        """Single vibration command in a PRE/POST session."""
+        return self.send_vib_session([command])
 
     def test_connection(self) -> bool:
         r"""Quick connectivity test -- send LOGICDATAOPEN and expect ACK\xfe."""

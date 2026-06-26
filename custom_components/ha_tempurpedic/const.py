@@ -16,6 +16,8 @@ DEFAULT_HEAD_MAX = 40
 DEFAULT_LEG_MAX = 40
 
 LOGICDATAOPEN = b"\xfeLOGICDATAOPEN"
+VIB_PRE = b"\x35"
+VIB_POST = b"\x34"
 
 COMMANDS: dict[str, bytes] = {
     "flat":         bytes.fromhex("3305320a945c0400cc"),

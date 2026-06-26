@@ -84,12 +84,28 @@ class TempurpedicVibrationNumber(TempurpedicEntity, NumberEntity):
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
 
     async def async_set_native_value(self, value: float) -> None:
-        """Send vibration intensity command to the bed."""
+        """Send vibration intensity commands, stepping one level at a time."""
+        current = int(self._attr_native_value)
+        target = int(value)
         self._attr_native_value = value
-        if value == 0:
-            cmd = COMMANDS["vibrate_off"]
+
+        if target == current:
+            self.async_write_ha_state()
+            return
+
+        if target == 0:
+            commands = [COMMANDS["vibrate_off"]]
+        elif target > current:
+            commands = [
+                build_vib_command(self.entity_description.zone, lvl)
+                for lvl in range(current + 1, target + 1)
+            ]
         else:
-            cmd = build_vib_command(self.entity_description.zone, int(value))
+            commands = [
+                build_vib_command(self.entity_description.zone, lvl)
+                for lvl in range(current - 1, target - 1, -1)
+            ]
+
         client = self._entry.runtime_data.client
-        await self.hass.async_add_executor_job(client.send_command_direct, cmd)
+        await self.hass.async_add_executor_job(client.send_vib_session, commands)
         self.async_write_ha_state()
