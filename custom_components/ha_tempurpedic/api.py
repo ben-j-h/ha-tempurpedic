@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import socket
 import time
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class TempurpedicClient:
@@ -54,37 +57,54 @@ class TempurpedicClient:
         Send one or more vibration commands in a PRE/POST session.
 
         Protocol: 0x35 → ACK5 → [command → ACK3]+ → 0x34 → ACK4.
-        Multiple commands share one session (used for level stepping).
+        VIB_POST is always sent once the session is open, even on failure,
+        so the bed is never left with a dangling open session.
         """
         from .const import VIB_POST, VIB_PRE
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        session_open = False
+        ok = False
         try:
             sock.settimeout(2)
             sock.connect((self._host, self._port))
             sock.send(VIB_PRE)
             try:
-                sock.recv(32)  # ACK5
+                ack5 = sock.recv(32)
             except TimeoutError:
+                _LOGGER.warning("VIB_PRE timeout from %s (bed offline?)", self._host)
                 return False
+            session_open = True
+            _LOGGER.debug("VIB session open; ACK5=%r", ack5)
+            ok = True
             for cmd in commands:
                 sock.send(cmd)
                 try:
                     ack = sock.recv(16)
                 except TimeoutError:
-                    return False
-                if ack != b"ACK3":
-                    return False
-            sock.send(VIB_POST)
-            with contextlib.suppress(TimeoutError):
-                sock.recv(16)  # ACK4
-        except OSError:
-            return False
-        else:
-            return True
+                    _LOGGER.warning("VIB command ACK timeout from %s", self._host)
+                    ok = False
+                    break
+                if ack not in (b"ACK3", b"ACK\x03"):
+                    _LOGGER.warning(
+                        "VIB unexpected ACK from %s: %r (expected ACK3)",
+                        self._host,
+                        ack,
+                    )
+                    ok = False
+                    break
+        except OSError as e:
+            _LOGGER.warning("VIB session OSError for %s: %s", self._host, e)
+            ok = False
         finally:
+            if session_open:
+                with contextlib.suppress(OSError):
+                    sock.send(VIB_POST)
+                    with contextlib.suppress(OSError):
+                        sock.recv(16)  # ACK4
             with contextlib.suppress(OSError):
                 sock.close()
+        return ok
 
     def send_command_direct(self, command: bytes) -> bool:
         """Single vibration command in a PRE/POST session."""
