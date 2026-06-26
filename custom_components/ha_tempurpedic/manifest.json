@@ -4,8 +4,8 @@
   "codeowners": ["@ben-j-h"],
   "config_flow": true,
   "documentation": "https://github.com/ben-j-h/ha-tempurpedic",
-  "iot_class": "assumed_state",
   "integration_type": "device",
+  "iot_class": "assumed_state",
   "issue_tracker": "https://github.com/ben-j-h/ha-tempurpedic/issues",
   "version": "1.0.7"
 }
