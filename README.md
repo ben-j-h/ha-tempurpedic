@@ -11,8 +11,10 @@ Control your TEMPUR-Ergo adjustable base directly from Home Assistant over your 
 ## Features
 
 - **Position control** — Head up/down, legs up/down, flat, and four memory presets
-- **Massage control** — Per-zone vibration intensity (head, lumbar, legs) and four vibration presets
-- **Hold-to-move** — The integration runs a continuous loop while a direction is held, matching the app's behavior exactly
+- **Absolute massage control** — Per-zone vibration intensity sliders (head, lumbar, legs) that jump straight to the requested level, plus the bed's four built-in massage programs
+- **Hold-to-move** — The integration sends a movement command in a loop while a direction is held
+- **Position estimate** — Head/leg position sensors (0–100%) derived from hold-to-move tick counting, once calibrated
+- **Auto-discovery** — Bases that are visible on the local network are found automatically
 - **Split-king support** — Add the integration twice (once per side) for independent left/right control
 - **Fully local** — All commands go directly to the bed over UDP port 50007; no Tempur-Pedic account or internet connection required
 
@@ -38,6 +40,15 @@ Control your TEMPUR-Ergo adjustable base directly from Home Assistant over your 
 
 ## Configuration
 
+### Automatic discovery
+
+The bed's WiFi module broadcasts an identity beacon on the local network. If
+Home Assistant can see that broadcast (host networking, or the same L2 segment),
+a **Discovered** card appears under **Settings → Devices & Services** — just give
+the side a name and confirm. Split-king beds are discovered once per side.
+
+### Manual
+
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **Tempurpedic Adjustable Base**
 3. Enter:
@@ -45,7 +56,9 @@ Control your TEMPUR-Ergo adjustable base directly from Home Assistant over your 
    - **IP Address** — the bed's local IP (find it in your router's DHCP table; recommend setting a static lease)
    - **UDP Port** — default `50007`, leave as-is unless you have a reason to change it
 
-The integration tests connectivity on setup — if the bed doesn't respond, setup will fail with a "cannot connect" error.
+Either way the integration tests connectivity on setup — if the bed doesn't
+respond, setup fails with a "cannot connect" error. Discovery also refreshes the
+stored IP automatically if the bed's address changes.
 
 ## Entities
 
@@ -61,16 +74,46 @@ Each configured side creates the following entities:
 | `button.{name}_legs_up` | Legs up |
 | `button.{name}_legs_down` | Legs down |
 | `button.{name}_preset_1` … `preset_4` | Recall memory position 1–4 |
-| `button.{name}_vibrate_off` | Stop all vibration |
-| `button.{name}_vibrate_1` … `vibrate_4` | Vibration presets 1–4 |
+| `button.{name}_vibrate_off` | Stop all massage (also resets the three sliders to 0) |
+| `button.{name}_vibrate_1` … `vibrate_4` | Start canned massage program 1–4 (parks the sliders at 5) |
 
 ### Number sliders
 
+Each slider sets that zone's vibration intensity **absolutely** — drag to a
+value and the bed goes straight there (one UDP command, no ramp). `0` turns the
+zone off; when all three zones reach `0` a full massage-stop is sent.
+
 | Entity | Description |
 |---|---|
-| `number.{name}_vib_head` | Head zone vibration intensity (1–10) |
-| `number.{name}_vib_torso` | Lumbar zone vibration intensity (1–10) |
-| `number.{name}_vib_legs` | Leg zone vibration intensity (1–10) |
+| `number.{name}_vib_head` | Head zone vibration intensity (0–10) |
+| `number.{name}_vib_torso` | Lumbar zone vibration intensity (0–10) |
+| `number.{name}_vib_legs` | Leg zone vibration intensity (0–10) |
+
+### Sensors
+
+| Entity | Description |
+|---|---|
+| `sensor.{name}_head_position` | Estimated head elevation, 0–100% |
+| `sensor.{name}_leg_position` | Estimated leg elevation, 0–100% |
+
+Position is inferred by counting how long each section is driven during
+hold-to-move, so it drifts and is reset to 0 by **Flat**. It is only an
+estimate — the bed reports nothing back.
+
+## Calibration
+
+Both sensors default to a **full-travel count of 40 ticks**, measured on a real
+unit and believed to be standard for the TEMPUR-Ergo — so position works out of
+the box with no setup.
+
+If your bed's travel differs, open the integration's **Configure** dialog and,
+for each section:
+
+1. Press **Flat**, wait for it to settle.
+2. Hold the section up until the motor stops.
+3. Read the tick count from the position sensor and enter it as the max.
+
+Set a section to `0` to disable its estimate (sensor reports `unknown`).
 
 ## Services
 
@@ -88,7 +131,7 @@ Stop any active hold movement on all sides. No fields required.
 
 ## Lovelace Card
 
-The companion card ([tempurpedic-bed-card](https://github.com/ben-j-h/tempurpedic-bed-card)) provides a touch-optimized control panel with hold-to-move buttons, vibration sliders, and LEFT/BOTH/RIGHT split-king toggle.
+The companion card ([tempurpedic-bed-card](https://github.com/ben-j-h/tempurpedic-bed-card)) provides a touch-optimized control panel with hold-to-move buttons, vibration sliders, an animated bed silhouette driven by the position sensors, and a split-king side toggle with renameable labels.
 
 ## Split-King Setup
 
@@ -96,8 +139,8 @@ Add the integration twice — once for each side — giving each a distinct name
 
 ## Notes
 
-- The bed's protocol is **write-only**. There is no way to read back the current head/leg position over UDP. The bed silhouette in the Lovelace card is static; animated position would require external tilt sensors.
-- The bed's WiFi module (Roving Networks) also exposes TCP port 2000, but this is not used by the integration.
+- The UDP control channel is effectively **write-only** — the bed never reports its head/leg angle, so the position sensors are a dead-reckoning estimate from tick counting, not a true reading.
+- The bed's WiFi module also exposes a TCP config channel (port 2000) and, on some hardware, HTTP — WiFi setup, firmware, RSSI, etc. None of that is used here; see [`docs/ergo-base-protocol.md`](docs/ergo-base-protocol.md) for the full protocol reference.
 
 ---
 

@@ -22,13 +22,26 @@ from .const import (
     LOGGER,
 )
 from .data import TempurpedicData
+from .discovery import async_start_discovery
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant, ServiceCall
+    from homeassistant.helpers.typing import ConfigType
 
     from .data import TempurpedicConfigEntry
 
 PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.NUMBER, Platform.SENSOR]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(
+    hass: HomeAssistant,
+    config: ConfigType,  # noqa: ARG001
+) -> bool:
+    """Start passive UDP discovery of bases on the network."""
+    await async_start_discovery(hass)
+    return True
 
 
 async def async_setup_entry(

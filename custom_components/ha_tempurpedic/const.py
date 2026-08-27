@@ -10,14 +10,25 @@ CONF_HOST = "host"
 CONF_PORT = "port"
 DEFAULT_PORT = 50007
 
+# The base periodically broadcasts a 111-byte identity beacon on this UDP port.
+DISCOVERY_PORT = 55555
+DISCOVERY_PACKET_LEN = 111
+CONF_DEVICE_ID = "device_id"
+CONF_HOSTNAME = "hostname"
+
 CONF_HEAD_MAX = "head_max_ticks"
 CONF_LEG_MAX = "leg_max_ticks"
 DEFAULT_HEAD_MAX = 40
 DEFAULT_LEG_MAX = 40
 
 LOGICDATAOPEN = b"\xfeLOGICDATAOPEN"
-VIB_PRE = b"\x35"
-VIB_POST = b"\x34"
+KILL_AUTOSEND = b"\x34"  # halt the base's internal motor auto-repeat; expects "ACK4"
+
+# Response prefix the base returns for an accepted LOGICDATA-framed command.
+ACK_OK = b"ACK3"
+
+VIB_MIN_LEVEL = 0
+VIB_MAX_LEVEL = 10
 
 COMMANDS: dict[str, bytes] = {
     "flat": bytes.fromhex("3305320a945c0400cc"),
@@ -36,9 +47,6 @@ COMMANDS: dict[str, bytes] = {
     "vibrate_4": bytes.fromhex("33053203948d037862"),
 }
 
-# Vibration intensity levels (10 steps, mapped from 1-10)
-# Checksum = bytes[4] XOR bytes[5] XOR bytes[6] XOR bytes[7]
-VIB_LEVELS = [0x18, 0x30, 0x48, 0x60, 0x78, 0x90, 0xA8, 0xC0, 0xD8, 0xF0]
 VIB_ZONE_HEAD = 0x00
 VIB_ZONE_TORSO = 0x01
 VIB_ZONE_LEGS = 0x02
@@ -46,11 +54,13 @@ VIB_ZONE_LEGS = 0x02
 
 def build_vib_command(zone: int, level: int) -> bytes:
     """
-    Build a 9-byte vibration intensity command.
+    Build a 9-byte absolute vibration-intensity command (app's ManualMassageCommand).
 
-    zone: VIB_ZONE_HEAD / TORSO / LEGS
-    level: 1-10
+    zone:  VIB_ZONE_HEAD / TORSO / LEGS
+    level: 0 (off) .. 10 (max); the wire byte is level * 24 (0x00, 0x18 .. 0xF0)
+    checksum = bytes[4] XOR bytes[5] XOR bytes[6] XOR bytes[7]
     """
-    level_byte = VIB_LEVELS[max(0, min(9, level - 1))]
+    level = max(VIB_MIN_LEVEL, min(VIB_MAX_LEVEL, level))
+    level_byte = level * 24
     checksum = 0x94 ^ 0x85 ^ zone ^ level_byte
     return bytes([0x33, 0x05, 0x32, 0x03, 0x94, 0x85, zone, level_byte, checksum])

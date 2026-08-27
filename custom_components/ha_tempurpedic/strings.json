@@ -11,10 +11,24 @@
                 "data_description": {
                     "name": "A friendly label for this side (e.g. \"Master Bedroom Left\"). Used as the device name in Home Assistant."
                 }
+            },
+            "discovery_confirm": {
+                "title": "TEMPUR-Ergo base found",
+                "description": "A base was found at {host} (device {device_id}). Give this side a name to add it. For a split king you'll be prompted again for the other side.",
+                "data": {
+                    "name": "Device Name"
+                },
+                "data_description": {
+                    "name": "A friendly label for this side (e.g. \"Master Bedroom Left\")."
+                }
             }
         },
         "error": {
             "cannot_connect": "Unable to reach the bed. Check the IP address and ensure the bed is powered on and connected to WiFi."
+        },
+        "abort": {
+            "already_configured": "This base is already set up in Home Assistant.",
+            "cannot_connect": "The discovered base did not respond on UDP port 50007."
         }
     },
     "options": {

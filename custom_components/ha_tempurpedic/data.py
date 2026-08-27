@@ -24,3 +24,8 @@ class TempurpedicData:
     head_ticks: int = 0
     leg_ticks: int = 0
     position_sensors: list = field(default_factory=list)
+    # Last commanded vibration level per zone (VIB_ZONE_* -> 0..10). Shared across
+    # the three zone sliders so "all zones off" can trigger a full stop.
+    vib_levels: dict[int, int] = field(default_factory=dict)
+    # The three zone-slider entities, so preset/off buttons can move them.
+    vib_numbers: list = field(default_factory=list)

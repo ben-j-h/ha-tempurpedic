@@ -10,8 +10,10 @@ from homeassistant.core import callback
 
 from .api import TempurpedicClient
 from .const import (
+    CONF_DEVICE_ID,
     CONF_HEAD_MAX,
     CONF_HOST,
+    CONF_HOSTNAME,
     CONF_LEG_MAX,
     CONF_NAME,
     CONF_PORT,
@@ -24,6 +26,7 @@ from .const import (
 
 if TYPE_CHECKING:
     from homeassistant.data_entry_flow import FlowResult
+    from homeassistant.helpers.typing import DiscoveryInfoType
 
 STEP_SCHEMA = vol.Schema(
     {
@@ -38,6 +41,10 @@ class TempurpedicFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Tempurpedic adjustable base."""
 
     VERSION = 1
+
+    def __init__(self) -> None:
+        """Hold discovery details between steps."""
+        self._discovered: dict[str, Any] = {}
 
     @staticmethod
     @callback
@@ -72,6 +79,69 @@ class TempurpedicFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=STEP_SCHEMA,
             errors=errors,
         )
+
+    async def async_step_integration_discovery(
+        self,
+        discovery_info: DiscoveryInfoType,
+    ) -> FlowResult:
+        """Handle a base found via its UDP identity beacon."""
+        device_id: str = discovery_info[CONF_DEVICE_ID]
+        host: str = discovery_info[CONF_HOST]
+
+        await self.async_set_unique_id(device_id)
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
+        # Adopt an entry that was added manually before discovery existed.
+        for entry in self._async_current_entries():
+            if entry.data.get(CONF_HOST) == host:
+                if entry.unique_id is None:
+                    self.hass.config_entries.async_update_entry(
+                        entry, unique_id=device_id
+                    )
+                return self.async_abort(reason="already_configured")
+
+        self._discovered = dict(discovery_info)
+        self.context["title_placeholders"] = {"name": self._discovered_name()}
+        return await self.async_step_discovery_confirm()
+
+    async def async_step_discovery_confirm(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Let the user name a discovered base and confirm adding it."""
+        host: str = self._discovered[CONF_HOST]
+
+        if user_input is not None:
+            client = TempurpedicClient(host=host, port=DEFAULT_PORT)
+            reachable = await self.hass.async_add_executor_job(client.test_connection)
+            if not reachable:
+                return self.async_abort(reason="cannot_connect")
+            return self.async_create_entry(
+                title=user_input[CONF_NAME],
+                data={
+                    CONF_NAME: user_input[CONF_NAME],
+                    CONF_HOST: host,
+                    CONF_PORT: DEFAULT_PORT,
+                },
+            )
+
+        return self.async_show_form(
+            step_id="discovery_confirm",
+            data_schema=vol.Schema(
+                {vol.Required(CONF_NAME, default=self._discovered_name()): str}
+            ),
+            description_placeholders={
+                "host": host,
+                "device_id": self._discovered[CONF_DEVICE_ID],
+            },
+        )
+
+    def _discovered_name(self) -> str:
+        """Best-effort friendly name for a discovered base."""
+        hostname: str = (self._discovered.get(CONF_HOSTNAME) or "").strip()
+        if hostname:
+            return hostname
+        return f"TEMPUR-Ergo {self._discovered[CONF_DEVICE_ID][-6:]}"
 
 
 class TempurpedicOptionsFlow(config_entries.OptionsFlow):

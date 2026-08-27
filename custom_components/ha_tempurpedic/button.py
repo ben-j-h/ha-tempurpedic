@@ -23,7 +23,6 @@ class TempurpedicButtonDescription(ButtonEntityDescription):
 
     command_key: str
     hold: bool = False
-    direct: bool = False  # single send (no LOGICDATAOPEN) — vibration commands only
 
 
 BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
@@ -87,35 +86,30 @@ BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
         name="Vibration Off",
         icon="mdi:vibrate-off",
         command_key="vibrate_off",
-        direct=True,
     ),
     TempurpedicButtonDescription(
         key="vibrate_1",
         name="Vibration Preset 1",
         icon="mdi:vibrate",
         command_key="vibrate_1",
-        direct=True,
     ),
     TempurpedicButtonDescription(
         key="vibrate_2",
         name="Vibration Preset 2",
         icon="mdi:vibrate",
         command_key="vibrate_2",
-        direct=True,
     ),
     TempurpedicButtonDescription(
         key="vibrate_3",
         name="Vibration Preset 3",
         icon="mdi:vibrate",
         command_key="vibrate_3",
-        direct=True,
     ),
     TempurpedicButtonDescription(
         key="vibrate_4",
         name="Vibration Preset 4",
         icon="mdi:vibrate",
         command_key="vibrate_4",
-        direct=True,
     ),
 )
 
@@ -159,24 +153,29 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
             for sensor in rd.position_sensors:
                 sensor.async_write_ha_state()
 
-        client = self._entry.runtime_data.client
+        rd = self._entry.runtime_data
+        key = self.entity_description.key
         cmd = COMMANDS[self.entity_description.command_key]
-        send = (
-            client.send_command_direct
-            if self.entity_description.direct
-            else client.send_command
-        )
-        ok = await self.hass.async_add_executor_job(send, cmd)
+        ok = await self.hass.async_add_executor_job(rd.client.send_command, cmd)
         if not ok:
             if self.entity_description.hold:
                 LOGGER.debug(
                     "%s: no ACK for %s (hold-overlap, bed likely moving)",
                     self._entry.title,
-                    self.entity_description.key,
+                    key,
                 )
             else:
                 LOGGER.warning(
                     "%s: no ACK for %s command",
                     self._entry.title,
-                    self.entity_description.key,
+                    key,
                 )
+
+        # Keep the zone sliders in step with the massage buttons, like the app:
+        # a preset program parks every zone at 5, "off" drops them to 0.
+        if key == "vibrate_off":
+            for number in rd.vib_numbers:
+                number.reflect_level(0)
+        elif key.startswith("vibrate_"):
+            for number in rd.vib_numbers:
+                number.reflect_level(5)

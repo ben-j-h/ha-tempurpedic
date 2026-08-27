@@ -12,6 +12,9 @@ __pycache__
 coverage.xml
 .ruff_cache
 
+# decompiled vendor app — reference only, not for redistribution
+research/
+
 
 # Home Assistant configuration
 config/*
