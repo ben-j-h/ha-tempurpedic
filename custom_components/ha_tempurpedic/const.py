@@ -30,6 +30,16 @@ ACK_OK = b"ACK3"
 VIB_MIN_LEVEL = 0
 VIB_MAX_LEVEL = 10
 
+# Massage program: 0 = off, 1..4 = the base's four built-in programs.
+MASSAGE_PROGRAM_MIN = 0
+MASSAGE_PROGRAM_MAX = 4
+# Each zone slider parks here when a program is running (matches the app).
+MASSAGE_PROGRAM_LEVEL = 5
+
+# Position preset: 0 = none selected, 1..4 = recall memory position.
+POSITION_PRESET_MIN = 0
+POSITION_PRESET_MAX = 4
+
 COMMANDS: dict[str, bytes] = {
     "flat": bytes.fromhex("3305320a945c0400cc"),
     "head_up": bytes.fromhex("3305321894530005c2"),

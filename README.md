@@ -10,8 +10,8 @@ Control your TEMPUR-Ergo adjustable base directly from Home Assistant over your 
 
 ## Features
 
-- **Position control** — Head up/down, legs up/down, flat, and four memory presets
-- **Absolute massage control** — Per-zone vibration intensity sliders (head, lumbar, legs) that jump straight to the requested level, plus the bed's four built-in massage programs
+- **Position control** — Head up/down, legs up/down, flat, and a memory-preset value (0–4)
+- **Absolute massage control** — Per-zone vibration intensity values (head, lumbar, legs) that jump straight to the requested level, plus a single massage-program value (0 = off, 1–4 = the bed's built-in programs)
 - **Hold-to-move** — The integration sends a movement command in a loop while a direction is held
 - **Position estimate** — Head/leg position sensors (0–100%) derived from hold-to-move tick counting, once calibrated
 - **Auto-discovery** — Bases that are visible on the local network are found automatically
@@ -73,21 +73,29 @@ Each configured side creates the following entities:
 | `button.{name}_head_down` | Head down |
 | `button.{name}_legs_up` | Legs up |
 | `button.{name}_legs_down` | Legs down |
-| `button.{name}_preset_1` … `preset_4` | Recall memory position 1–4 |
-| `button.{name}_vibrate_off` | Stop all massage (also resets the three sliders to 0) |
-| `button.{name}_vibrate_1` … `vibrate_4` | Start canned massage program 1–4 (parks the sliders at 5) |
 
-### Number sliders
+Only momentary movement actions are buttons. Recalling a position and starting a
+massage program are **values** — see below.
 
-Each slider sets that zone's vibration intensity **absolutely** — drag to a
-value and the bed goes straight there (one UDP command, no ramp). `0` turns the
-zone off; when all three zones reach `0` a full massage-stop is sent.
+### Numbers
 
-| Entity | Description |
-|---|---|
-| `number.{name}_vib_head` | Head zone vibration intensity (0–10) |
-| `number.{name}_vib_torso` | Lumbar zone vibration intensity (0–10) |
-| `number.{name}_vib_legs` | Leg zone vibration intensity (0–10) |
+Every massage/preset control is a value: set it and the matching command is
+sent. No banks of buttons.
+
+| Entity | Range | Description |
+|---|---|---|
+| `number.{name}_vib_head` | 0–10 | Head zone vibration intensity, absolute (no ramp) |
+| `number.{name}_vib_torso` | 0–10 | Lumbar zone vibration intensity |
+| `number.{name}_vib_legs` | 0–10 | Leg zone vibration intensity |
+| `number.{name}_massage_program` | 0–4 | `0` = massage off, `1`–`4` = the bed's built-in programs |
+| `number.{name}_position_preset` | 0–4 | `0` = none, `1`–`4` = recall that memory position |
+
+Cross-resets, matching the app:
+
+- All three `vib_*` zones at `0` → a full massage-stop is sent.
+- Setting `massage_program` to `1`–`4` parks the `vib_*` values at `5`; `0` clears them.
+- Changing any `vib_*` value clears `massage_program` back to `0`.
+- Any manual bed movement (a movement button or `start_move`) clears `position_preset` back to `0`. Recalling a preset does **not** clear it — it stays on the recalled number.
 
 ### Sensors
 

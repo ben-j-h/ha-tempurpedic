@@ -107,6 +107,10 @@ def _async_register_services(hass: HomeAssistant) -> None:
         if not entry_data:
             return
 
+        # Holding a direction is manual movement -> clear the position preset.
+        if entry_data.preset_number is not None:
+            entry_data.preset_number.reflect_value(0)
+
         # unique_id format: "{entry_id}_{command_key}"
         command_key = entity_entry.unique_id[len(entry_id) + 1 :]
         command = COMMANDS.get(command_key)

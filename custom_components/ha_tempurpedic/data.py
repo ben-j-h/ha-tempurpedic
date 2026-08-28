@@ -27,5 +27,11 @@ class TempurpedicData:
     # Last commanded vibration level per zone (VIB_ZONE_* -> 0..10). Shared across
     # the three zone sliders so "all zones off" can trigger a full stop.
     vib_levels: dict[int, int] = field(default_factory=dict)
-    # The three zone-slider entities, so preset/off buttons can move them.
+    # The three zone-slider entities, so the program entity can move them.
     vib_numbers: list = field(default_factory=list)
+    # The consolidated massage-program (0..4) and position-preset (0..4) entities,
+    # plus their last values, so each can reset the other on manual input.
+    massage_program: int = 0
+    position_preset: int = 0
+    program_number: object | None = field(default=None)
+    preset_number: object | None = field(default=None)

@@ -1,4 +1,8 @@
-"""Button platform for ha_tempurpedic."""
+"""
+Button platform for ha_tempurpedic -- momentary bed-movement actions only.
+
+Position presets and massage programs are number entities now (see number.py).
+"""
 
 from __future__ import annotations
 
@@ -57,60 +61,6 @@ BUTTON_DESCRIPTIONS: tuple[TempurpedicButtonDescription, ...] = (
         command_key="legs_down",
         hold=True,
     ),
-    TempurpedicButtonDescription(
-        key="preset_1",
-        name="Position Preset 1",
-        icon="mdi:numeric-1-box",
-        command_key="preset_1",
-    ),
-    TempurpedicButtonDescription(
-        key="preset_2",
-        name="Position Preset 2",
-        icon="mdi:numeric-2-box",
-        command_key="preset_2",
-    ),
-    TempurpedicButtonDescription(
-        key="preset_3",
-        name="Position Preset 3",
-        icon="mdi:numeric-3-box",
-        command_key="preset_3",
-    ),
-    TempurpedicButtonDescription(
-        key="preset_4",
-        name="Position Preset 4",
-        icon="mdi:numeric-4-box",
-        command_key="preset_4",
-    ),
-    TempurpedicButtonDescription(
-        key="vibrate_off",
-        name="Vibration Off",
-        icon="mdi:vibrate-off",
-        command_key="vibrate_off",
-    ),
-    TempurpedicButtonDescription(
-        key="vibrate_1",
-        name="Vibration Preset 1",
-        icon="mdi:vibrate",
-        command_key="vibrate_1",
-    ),
-    TempurpedicButtonDescription(
-        key="vibrate_2",
-        name="Vibration Preset 2",
-        icon="mdi:vibrate",
-        command_key="vibrate_2",
-    ),
-    TempurpedicButtonDescription(
-        key="vibrate_3",
-        name="Vibration Preset 3",
-        icon="mdi:vibrate",
-        command_key="vibrate_3",
-    ),
-    TempurpedicButtonDescription(
-        key="vibrate_4",
-        name="Vibration Preset 4",
-        icon="mdi:vibrate",
-        command_key="vibrate_4",
-    ),
 )
 
 
@@ -126,7 +76,7 @@ async def async_setup_entry(
 
 
 class TempurpedicButton(TempurpedicEntity, ButtonEntity):
-    """A button that sends one command to the bed."""
+    """A button that sends one movement command to the bed."""
 
     entity_description: TempurpedicButtonDescription
 
@@ -142,9 +92,11 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Send the command to the bed."""
+        rd = self._entry.runtime_data
+        key = self.entity_description.key
+
         # Flat is the hard sync point: cancel movement and reset position state.
-        if self.entity_description.key == "flat":
-            rd = self._entry.runtime_data
+        if key == "flat":
             if rd.move_task and not rd.move_task.done():
                 rd.move_task.cancel()
                 rd.move_task = None
@@ -153,8 +105,6 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
             for sensor in rd.position_sensors:
                 sensor.async_write_ha_state()
 
-        rd = self._entry.runtime_data
-        key = self.entity_description.key
         cmd = COMMANDS[self.entity_description.command_key]
         ok = await self.hass.async_add_executor_job(rd.client.send_command, cmd)
         if not ok:
@@ -165,17 +115,8 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
                     key,
                 )
             else:
-                LOGGER.warning(
-                    "%s: no ACK for %s command",
-                    self._entry.title,
-                    key,
-                )
+                LOGGER.warning("%s: no ACK for %s command", self._entry.title, key)
 
-        # Keep the zone sliders in step with the massage buttons, like the app:
-        # a preset program parks every zone at 5, "off" drops them to 0.
-        if key == "vibrate_off":
-            for number in rd.vib_numbers:
-                number.reflect_level(0)
-        elif key.startswith("vibrate_"):
-            for number in rd.vib_numbers:
-                number.reflect_level(5)
+        # Any manual movement clears the active position preset.
+        if rd.preset_number is not None:
+            rd.preset_number.reflect_value(0)
