@@ -22,32 +22,44 @@ class TempurpedicClient:
         """
         Send a command using the three-step LOGICDATAOPEN protocol.
 
-        Returns True if ACK3 received, False on timeout/error.
+        Returns True if ACK3 received, False on timeout/error. Every packet and
+        reply is logged at DEBUG so a non-working command can be diagnosed.
         """
         from .const import LOGICDATAOPEN
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        replies: list[bytes] = []
         try:
             sock.settimeout(2)
             sock.connect((self._host, self._port))
 
             sock.send(command)
-
             time.sleep(0.15)
+
             sock.send(LOGICDATAOPEN)
             with contextlib.suppress(TimeoutError):
-                sock.recv(16)
+                replies.append(sock.recv(16))
 
             time.sleep(0.15)
             sock.send(command)
             try:
                 ack = sock.recv(16)
             except TimeoutError:
-                return False
-            else:
-                return ack == b"ACK3"
-        except OSError:
+                ack = b""
+            replies.append(ack)
+
+            ok = ack == b"ACK3"
+        except OSError as err:
+            _LOGGER.debug("TX %s -> OSError %s", command.hex(), err)
             return False
+        else:
+            _LOGGER.debug(
+                "TX %s  RX %s  ok=%s",
+                command.hex(),
+                [r.hex() for r in replies],
+                ok,
+            )
+            return ok
         finally:
             with contextlib.suppress(OSError):
                 sock.close()
