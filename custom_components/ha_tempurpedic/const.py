@@ -21,6 +21,20 @@ CONF_LEG_MAX = "leg_max_ticks"
 DEFAULT_HEAD_MAX = 40
 DEFAULT_LEG_MAX = 40
 
+# Optional: a power/energy sensor on the bed's plug. The base reports nothing, so
+# watts are the only external signal for "is something happening".
+CONF_POWER_SENSOR = "power_sensor"
+CONF_POWER_IDLE_W = "power_idle_w"
+CONF_POWER_TILT_W = "power_tilt_w"
+# Deliberately conservative guesses -- every bed + plug differs, tune in options.
+DEFAULT_POWER_IDLE_W = 10.0
+DEFAULT_POWER_TILT_W = 45.0
+
+ACTIVITY_UNKNOWN = "unknown"
+ACTIVITY_IDLE = "idle"
+ACTIVITY_MASSAGE = "massage"
+ACTIVITY_TILTING = "tilting"
+
 LOGICDATAOPEN = b"\xfeLOGICDATAOPEN"
 KILL_AUTOSEND = b"\x34"  # halt the base's internal motor auto-repeat; expects "ACK4"
 

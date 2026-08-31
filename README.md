@@ -14,6 +14,7 @@ Control your TEMPUR-Ergo adjustable base directly from Home Assistant over your 
 - **Per-zone massage control** — Vibration intensity values (head, lumbar, legs); each walks to the requested level one step at a time, the way the app does, plus a single massage-program value (0 = off, 1–4 = the bed's built-in programs)
 - **Hold-to-move** — The integration sends a movement command in a loop while a direction is held
 - **Position estimate** — Head/leg position sensors (0–100%) derived from hold-to-move tick counting, once calibrated
+- **Power monitoring (optional)** — Point it at a metering plug and get `moving` / `massage_active` binary sensors, plus automatic invalidation of the position estimate when the wall remote is used
 - **Auto-discovery** — Bases that are visible on the local network are found automatically
 - **Split-king support** — Add the integration twice (once per side) for independent left/right control
 - **Fully local** — All commands go directly to the bed over UDP port 50007; no Tempur-Pedic account or internet connection required
@@ -105,23 +106,42 @@ Cross-resets, matching the app:
 | `sensor.{name}_leg_position` | Estimated leg elevation, 0–100% |
 
 Position is inferred by counting how long each section is driven during
-hold-to-move, so it drifts and is reset to 0 by **Flat**. It is only an
-estimate — the bed reports nothing back.
+hold-to-move, so it drifts, is reset to 0 by **Flat**, and reads `unknown` once
+an out-of-band move is detected (see below). It is only an estimate — the bed
+reports nothing back.
 
-## Calibration
+### Binary sensors
 
-Both sensors default to a **full-travel count of 40 ticks**, measured on a real
-unit and believed to be standard for the TEMPUR-Ergo — so position works out of
-the box with no setup.
+| Entity | On when |
+|---|---|
+| `binary_sensor.{name}_moving` | a hold-to-move is running, or the plug shows a tilt-level draw |
+| `binary_sensor.{name}_massage_active` | vibration/program is commanded, or the plug shows a massage-level draw |
 
-If your bed's travel differs, open the integration's **Configure** dialog and,
-for each section:
+`moving` carries `power_w`, `activity` (`idle`/`massage`/`tilting`/`unknown`) and
+`position_trusted` as attributes.
 
-1. Press **Flat**, wait for it to settle.
-2. Hold the section up until the motor stops.
-3. Read the tick count from the position sensor and enter it as the max.
+## Calibration & power monitoring
 
-Set a section to `0` to disable its estimate (sensor reports `unknown`).
+Open the integration's **Configure** dialog.
+
+**Position ticks.** Both sensors default to a **full-travel count of 40 ticks**,
+measured on a real unit and believed standard for the TEMPUR-Ergo, so position
+works out of the box. If your travel differs: press **Flat**, hold a section up
+until the motor stops, read the tick count off the sensor, enter it as the max.
+`0` disables that section's estimate.
+
+**Power sensor (optional).** The base reports nothing, so a metering plug is the
+only outside signal. Point `power_sensor` at your plug's power (W) entity and set
+two thresholds:
+
+- **Idle threshold** — at or below = bed idle
+- **Tilt threshold** — at or above = a lift motor is running; between the two = massaging
+
+Every bed and plug is different — start with the defaults (10 W / 45 W) and watch
+the `moving` sensor's `power_w` attribute while you tilt vs. massage, then tune.
+With a power sensor set, an unexpected tilt-level draw (someone used the wall
+remote) marks the position estimate `unknown` until the next **Flat**, and the
+tick counter stops if the motor is drawing idle current (hit its limit).
 
 ## Services
 

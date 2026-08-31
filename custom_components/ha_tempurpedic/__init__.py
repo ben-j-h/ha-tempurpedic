@@ -7,17 +7,28 @@ from typing import TYPE_CHECKING
 
 import voluptuous as vol
 from homeassistant.const import Platform
+from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.event import async_track_state_change_event
 
 from .api import TempurpedicClient
 from .const import (
+    ACTIVITY_IDLE,
+    ACTIVITY_MASSAGE,
+    ACTIVITY_TILTING,
+    ACTIVITY_UNKNOWN,
     COMMANDS,
     CONF_HEAD_MAX,
     CONF_HOST,
     CONF_LEG_MAX,
     CONF_PORT,
+    CONF_POWER_IDLE_W,
+    CONF_POWER_SENSOR,
+    CONF_POWER_TILT_W,
     DEFAULT_PORT,
+    DEFAULT_POWER_IDLE_W,
+    DEFAULT_POWER_TILT_W,
     DOMAIN,
     LOGGER,
 )
@@ -25,12 +36,21 @@ from .data import TempurpedicData
 from .discovery import async_start_discovery
 
 if TYPE_CHECKING:
-    from homeassistant.core import HomeAssistant, ServiceCall
+    from collections.abc import Callable
+
+    from homeassistant.core import Event, HomeAssistant, ServiceCall
     from homeassistant.helpers.typing import ConfigType
 
     from .data import TempurpedicConfigEntry
 
-PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.NUMBER, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.NUMBER,
+    Platform.SENSOR,
+]
+
+_UNAVAILABLE_STATES = ("unknown", "unavailable", "", "none")
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -63,9 +83,56 @@ async def async_setup_entry(
     if not hass.services.has_service(DOMAIN, "start_move"):
         _async_register_services(hass)
 
+    power_sensor = entry.options.get(CONF_POWER_SENSOR)
+    if power_sensor:
+        entry.async_on_unload(
+            async_track_state_change_event(
+                hass, [power_sensor], _make_power_handler(entry)
+            )
+        )
+
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     return True
+
+
+def _make_power_handler(
+    entry: TempurpedicConfigEntry,
+) -> Callable[[Event], None]:
+    """Build the plug-power state listener for one config entry."""
+
+    @callback
+    def _handle(event: Event) -> None:
+        rd = entry.runtime_data
+        new = event.data.get("new_state")
+        if new is None or str(new.state).lower() in _UNAVAILABLE_STATES:
+            rd.power_w = None
+            rd.activity = ACTIVITY_UNKNOWN
+        else:
+            try:
+                watts = float(new.state)
+            except (TypeError, ValueError):
+                return
+            idle_w = float(entry.options.get(CONF_POWER_IDLE_W, DEFAULT_POWER_IDLE_W))
+            tilt_w = float(entry.options.get(CONF_POWER_TILT_W, DEFAULT_POWER_TILT_W))
+            rd.power_w = watts
+            if watts >= tilt_w:
+                rd.activity = ACTIVITY_TILTING
+            elif watts > idle_w:
+                rd.activity = ACTIVITY_MASSAGE
+            else:
+                rd.activity = ACTIVITY_IDLE
+
+            moving_by_us = rd.move_task is not None and not rd.move_task.done()
+            if rd.activity == ACTIVITY_TILTING and not moving_by_us:
+                # Someone used the wall remote / another app -- our tick count is
+                # now meaningless until the next Flat.
+                rd.position_trusted = False
+
+        for ent in (*rd.position_sensors, *rd.binary_sensors):
+            ent.async_write_ha_state()
+
+    return _handle
 
 
 async def async_unload_entry(
@@ -85,12 +152,11 @@ async def async_unload_entry(
 
 
 async def _async_options_updated(
-    hass: HomeAssistant,  # noqa: ARG001
+    hass: HomeAssistant,
     entry: TempurpedicConfigEntry,
 ) -> None:
-    """Push sensor state update when calibration options change."""
-    for sensor in entry.runtime_data.position_sensors:
-        sensor.async_write_ha_state()
+    """Reload so calibration and the power-sensor subscription re-apply."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 def _async_register_services(hass: HomeAssistant) -> None:
@@ -110,6 +176,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
         # Holding a direction is manual movement -> clear the position preset.
         if entry_data.preset_number is not None:
             entry_data.preset_number.reflect_value(0)
+        # We are the one moving it now, so the estimate is meaningful again.
+        entry_data.position_trusted = True
 
         # unique_id format: "{entry_id}_{command_key}"
         command_key = entity_entry.unique_id[len(entry_id) + 1 :]
@@ -131,19 +199,25 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 head_max: int = opts.get(CONF_HEAD_MAX, 0)
                 leg_max: int = opts.get(CONF_LEG_MAX, 0)
 
-                if command_key == "head_up":
+                # If a power sensor says the motor has stopped (hit its limit),
+                # don't keep counting ticks for commands the bed is ignoring.
+                counting = (
+                    not opts.get(CONF_POWER_SENSOR)
+                    or entry_data.activity != ACTIVITY_IDLE
+                )
+                if counting and command_key == "head_up":
                     entry_data.head_ticks = min(
                         entry_data.head_ticks + 1,
                         head_max if head_max else 999_999,
                     )
-                elif command_key == "head_down":
+                elif counting and command_key == "head_down":
                     entry_data.head_ticks = max(entry_data.head_ticks - 1, 0)
-                elif command_key == "legs_up":
+                elif counting and command_key == "legs_up":
                     entry_data.leg_ticks = min(
                         entry_data.leg_ticks + 1,
                         leg_max if leg_max else 999_999,
                     )
-                elif command_key == "legs_down":
+                elif counting and command_key == "legs_down":
                     entry_data.leg_ticks = max(entry_data.leg_ticks - 1, 0)
 
                 for sensor in entry_data.position_sensors:

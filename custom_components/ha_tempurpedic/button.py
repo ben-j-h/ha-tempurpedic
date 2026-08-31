@@ -102,6 +102,7 @@ class TempurpedicButton(TempurpedicEntity, ButtonEntity):
                 rd.move_task = None
             rd.head_ticks = 0
             rd.leg_ticks = 0
+            rd.position_trusted = True
             for sensor in rd.position_sensors:
                 sensor.async_write_ha_state()
 

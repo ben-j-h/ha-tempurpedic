@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 
 from .api import TempurpedicClient
 from .const import (
@@ -17,9 +18,14 @@ from .const import (
     CONF_LEG_MAX,
     CONF_NAME,
     CONF_PORT,
+    CONF_POWER_IDLE_W,
+    CONF_POWER_SENSOR,
+    CONF_POWER_TILT_W,
     DEFAULT_HEAD_MAX,
     DEFAULT_LEG_MAX,
     DEFAULT_PORT,
+    DEFAULT_POWER_IDLE_W,
+    DEFAULT_POWER_TILT_W,
     DOMAIN,
     LOGGER,
 )
@@ -156,6 +162,13 @@ class TempurpedicOptionsFlow(config_entries.OptionsFlow):
             return self.async_create_entry(data=user_input)
 
         current = self.config_entry.options
+
+        power_sensor_key = (
+            vol.Optional(CONF_POWER_SENSOR, default=current[CONF_POWER_SENSOR])
+            if current.get(CONF_POWER_SENSOR)
+            else vol.Optional(CONF_POWER_SENSOR)
+        )
+
         schema = vol.Schema(
             {
                 vol.Optional(
@@ -166,6 +179,17 @@ class TempurpedicOptionsFlow(config_entries.OptionsFlow):
                     CONF_LEG_MAX,
                     default=current.get(CONF_LEG_MAX, DEFAULT_LEG_MAX),
                 ): int,
+                power_sensor_key: selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="sensor", device_class="power")
+                ),
+                vol.Optional(
+                    CONF_POWER_IDLE_W,
+                    default=current.get(CONF_POWER_IDLE_W, DEFAULT_POWER_IDLE_W),
+                ): vol.Coerce(float),
+                vol.Optional(
+                    CONF_POWER_TILT_W,
+                    default=current.get(CONF_POWER_TILT_W, DEFAULT_POWER_TILT_W),
+                ): vol.Coerce(float),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

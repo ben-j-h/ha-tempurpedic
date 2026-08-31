@@ -35,3 +35,10 @@ class TempurpedicData:
     position_preset: int = 0
     program_number: object | None = field(default=None)
     preset_number: object | None = field(default=None)
+    # Power-monitoring derived state (only meaningful when a power_sensor is set).
+    activity: str = "unknown"
+    power_w: float | None = field(default=None)
+    # False once an unexpected tilt (wall remote / another app) is seen -- the
+    # tick-counted position can no longer be trusted until the next Flat.
+    position_trusted: bool = True
+    binary_sensors: list = field(default_factory=list)

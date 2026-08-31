@@ -87,8 +87,10 @@ class TempurpedicPositionSensor(TempurpedicEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return position as 0-100%, or None if uncalibrated."""
+        """Return position as 0-100%, or None if uncalibrated / not trusted."""
         rd = self._entry.runtime_data
+        if not rd.position_trusted:
+            return None
         if self.entity_description.zone == "head":
             ticks = rd.head_ticks
             max_ticks: int = self._entry.options.get(CONF_HEAD_MAX, DEFAULT_HEAD_MAX)
@@ -101,9 +103,9 @@ class TempurpedicPositionSensor(TempurpedicEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Expose raw tick count for calibration."""
+        """Expose raw tick count and whether the estimate is trusted."""
         rd = self._entry.runtime_data
         ticks = (
             rd.head_ticks if self.entity_description.zone == "head" else rd.leg_ticks
         )
-        return {"ticks": ticks}
+        return {"ticks": ticks, "trusted": rd.position_trusted}

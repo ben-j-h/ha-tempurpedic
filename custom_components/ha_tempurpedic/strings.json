@@ -34,14 +34,20 @@
     "options": {
         "step": {
             "init": {
-                "description": "Calibrate position tracking. Start from flat, hold the section up until it stops, then read the tick count from the sensor. Enter 0 to leave a section uncalibrated (position shows as unknown).",
+                "description": "Calibrate position tracking, and optionally point at a power/energy sensor on the bed's plug so the integration can tell when the bed is actually moving or massaging.",
                 "data": {
                     "head_max_ticks": "Head Max Ticks",
-                    "leg_max_ticks": "Leg Max Ticks"
+                    "leg_max_ticks": "Leg Max Ticks",
+                    "power_sensor": "Power sensor (optional)",
+                    "power_idle_w": "Idle threshold (W)",
+                    "power_tilt_w": "Tilt threshold (W)"
                 },
                 "data_description": {
-                    "head_max_ticks": "Tick count from flat to maximum head elevation.",
-                    "leg_max_ticks": "Tick count from flat to maximum leg elevation."
+                    "head_max_ticks": "Tick count from flat to maximum head elevation. 0 = uncalibrated.",
+                    "leg_max_ticks": "Tick count from flat to maximum leg elevation. 0 = uncalibrated.",
+                    "power_sensor": "A metering-plug power sensor for the bed. When set, an unexpected tilt-level draw (wall remote) marks the position estimate untrusted until the next Flat.",
+                    "power_idle_w": "At or below this the bed is considered idle. Above it (but below the tilt threshold) = massaging. Tune to your bed.",
+                    "power_tilt_w": "At or above this a lift motor is considered to be running. Tune to your bed."
                 }
             }
         }
