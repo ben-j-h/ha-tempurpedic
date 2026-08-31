@@ -14,6 +14,7 @@ massage program; manual bed movement clears the position preset.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -33,6 +34,7 @@ from .const import (
     POSITION_PRESET_MIN,
     VIB_MAX_LEVEL,
     VIB_MIN_LEVEL,
+    VIB_RAMP_DELAY,
     VIB_ZONE_HEAD,
     VIB_ZONE_LEGS,
     VIB_ZONE_TORSO,
@@ -106,6 +108,7 @@ class TempurpedicVibrationNumber(TempurpedicEntity, NumberEntity):
         self.entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         entry.runtime_data.vib_levels.setdefault(description.zone, 0)
+        self._ramp_target: int | None = None
 
     async def async_added_to_hass(self) -> None:
         """Register so the program entity can move this slider."""
@@ -119,30 +122,45 @@ class TempurpedicVibrationNumber(TempurpedicEntity, NumberEntity):
 
     def reflect_level(self, level: int) -> None:
         """Update the displayed level without sending anything."""
+        self._ramp_target = level  # cancel any ramp in flight
         self._attr_native_value = level
         self._entry.runtime_data.vib_levels[self.entity_description.zone] = level
         self.async_write_ha_state()
 
     async def async_set_native_value(self, value: float) -> None:
-        """Send one absolute intensity command for this zone."""
+        """
+        Walk this zone's level to the target one step at a time.
+
+        The base ignores level jumps -- the app only ever moves +/-1 at a time
+        (every ~500 ms while the control is held), so we replay that ramp.
+        """
         zone = self.entity_description.zone
         target = int(max(VIB_MIN_LEVEL, min(VIB_MAX_LEVEL, value)))
         rd = self._entry.runtime_data
+        client = rd.client
 
         self._attr_native_value = target
-        rd.vib_levels[zone] = target
+        self._ramp_target = target
+        self.async_write_ha_state()
 
-        client = rd.client
-        ok = await self.hass.async_add_executor_job(
-            client.send_command, build_vib_command(zone, target)
-        )
-        if not ok:
-            LOGGER.warning(
-                "%s: no ACK setting %s vibration to %d",
-                self._entry.title,
-                self.entity_description.key,
-                target,
+        current = rd.vib_levels.get(zone, 0)
+        step = 1 if target >= current else -1
+        for level in range(current + step, target + step, step):
+            if self._ramp_target != target:
+                return  # a newer set_value took over
+            ok = await self.hass.async_add_executor_job(
+                client.send_command, build_vib_command(zone, level)
             )
+            rd.vib_levels[zone] = level
+            if not ok:
+                LOGGER.warning(
+                    "%s: no ACK setting %s vibration to %d",
+                    self._entry.title,
+                    self.entity_description.key,
+                    level,
+                )
+            if level != target:
+                await asyncio.sleep(VIB_RAMP_DELAY)
 
         # All zones at 0 -> full stop, like the app.
         if target == 0 and not any(rd.vib_levels.values()):

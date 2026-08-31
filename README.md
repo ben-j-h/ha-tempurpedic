@@ -11,7 +11,7 @@ Control your TEMPUR-Ergo adjustable base directly from Home Assistant over your 
 ## Features
 
 - **Position control** — Head up/down, legs up/down, flat, and a memory-preset value (0–4)
-- **Absolute massage control** — Per-zone vibration intensity values (head, lumbar, legs) that jump straight to the requested level, plus a single massage-program value (0 = off, 1–4 = the bed's built-in programs)
+- **Per-zone massage control** — Vibration intensity values (head, lumbar, legs); each walks to the requested level one step at a time, the way the app does, plus a single massage-program value (0 = off, 1–4 = the bed's built-in programs)
 - **Hold-to-move** — The integration sends a movement command in a loop while a direction is held
 - **Position estimate** — Head/leg position sensors (0–100%) derived from hold-to-move tick counting, once calibrated
 - **Auto-discovery** — Bases that are visible on the local network are found automatically
@@ -84,7 +84,7 @@ sent. No banks of buttons.
 
 | Entity | Range | Description |
 |---|---|---|
-| `number.{name}_vib_head` | 0–10 | Head zone vibration intensity, absolute (no ramp) |
+| `number.{name}_vib_head` | 0–10 | Head zone vibration intensity (walks one step at a time to the target) |
 | `number.{name}_vib_torso` | 0–10 | Lumbar zone vibration intensity |
 | `number.{name}_vib_legs` | 0–10 | Leg zone vibration intensity |
 | `number.{name}_massage_program` | 0–4 | `0` = massage off, `1`–`4` = the bed's built-in programs |

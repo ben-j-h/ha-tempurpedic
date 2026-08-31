@@ -29,6 +29,10 @@ ACK_OK = b"ACK3"
 
 VIB_MIN_LEVEL = 0
 VIB_MAX_LEVEL = 10
+# The app never jumps a zone's level -- it walks +/-1 every ~500 ms while the
+# control is held. The base's manual-massage motor appears to need that ramp, so
+# we replay it instead of sending one absolute jump.
+VIB_RAMP_DELAY = 0.4
 
 # Massage program: 0 = off, 1..4 = the base's four built-in programs.
 MASSAGE_PROGRAM_MIN = 0
